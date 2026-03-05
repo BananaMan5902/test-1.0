@@ -1,0 +1,344 @@
+<!--
+Ultimate Mini LMS Platform
+GitHub Pages Compatible (Static Only)
+
+Features Added:
+✅ Student profile simulation (localStorage only)
+✅ Priority ranking dashboard
+✅ Modern UI animations
+✅ Announcement system
+✅ Dark / Light theme toggle
+✅ Progress lock logic (simple anti-cheat style)
+✅ Analytics charts (Chart.js CDN)
+
+IMPORTANT:
+This is a prototype project for learning.
+It is NOT a replacement for enterprise LMS platforms such as
+‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏‏
+like Schoology or Canvas.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ultimate Mini LMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:0;
+    display:flex;
+    transition:0.3s;
+}
+
+body.dark{
+    background:#1b1f23;
+    color:white;
+}
+
+.sidebar{
+    width:260px;
+    background:#eef1f6;
+    height:100vh;
+    padding:18px;
+    overflow-y:auto;
+    transition:0.3s;
+}
+
+.dark .sidebar{
+    background:#111;
+}
+
+.main{
+    flex:1;
+    padding:30px;
+}
+
+.class-btn{
+    width:100%;
+    padding:12px;
+    margin:6px 0;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.2s;
+}
+
+.class-btn:hover{
+    transform:scale(1.03);
+}
+
+.post{
+    border:1px solid #e2e6ed;
+    padding:18px;
+    margin:14px 0;
+    border-radius:16px;
+    background:white;
+    transition:0.25s;
+}
+
+.dark .post{
+    background:#222;
+    border-color:#333;
+}
+
+.post:hover{
+    transform:translateY(-2px);
+}
+
+input, button, select, textarea{
+    padding:10px;
+    margin:6px;
+    width:92%;
+    border-radius:10px;
+    border:1px solid #ccc;
+}
+
+.hidden{ display:none; }
+
+.progress-tag{
+    font-size:12px;
+    padding:5px 10px;
+    border-radius:8px;
+    display:inline-block;
+}
+
+.analytics-box{
+    width:100%;
+    max-width:500px;
+}
+
+.complete-btn{
+    width:auto;
+    background:#e3f7e9;
+    border:none;
+    cursor:pointer;
+    padding:8px 14px;
+    border-radius:10px;
+}
+
+@media(max-width:700px){
+    body{ flex-direction:column; }
+    .sidebar{
+        width:100%;
+        height:auto;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h2>Classes</h2>
+<button class="class-btn" onclick="openClass('Math')">Math</button>
+<button class="class-btn" onclick="openClass('Reading')">Reading</button>
+<button class="class-btn" onclick="openClass('Science')">Science</button>
+
+<hr>
+<button onclick="toggleTheme()">Toggle Dark Mode</button>
+
+<hr>
+<h3>Search</h3>
+<input id="searchInput" placeholder="Search" onkeyup="loadPosts()">
+
+<h3>Sort</h3>
+<select onchange="loadPosts()" id="sortFilter">
+<option value="priority">Priority Rank</option>
+<option value="new">Newest</option>
+<option value="old">Oldest</option>
+<option value="due">Due Date</option>
+</select>
+
+<hr>
+<h3>Teacher Login</h3>
+<input id="teacherPass" type="password" placeholder="Password">
+<button onclick="teacherLogin()">Login</button>
+
+<div id="teacherPanel" class="hidden">
+<h4>Publish Assignment</h4>
+<select id="postClass">
+<option>Math</option>
+<option>Reading</option>
+<option>Science</option>
+</select>
+
+<input id="postTitle" placeholder="Assignment Title">
+<textarea id="postContent" placeholder="Description or External Link"></textarea>
+
+<input id="postDue" type="date">
+
+<select id="postProgress">
+<option value="none">Not Started</option>
+<option value="progress">In Progress</option>
+<option value="done">Completed</option>
+</select>
+
+<button onclick="publishPost()">Publish</button>
+</div>
+</div>
+
+<div class="main">
+<h2 id="classTitle">Welcome</h2>
+<canvas id="analytics" class="analytics-box"></canvas>
+<div id="posts"></div>
+</div>
+
+<script>
+const PASSWORD = "Admin";
+let currentClass = "Math";
+
+function teacherLogin(){
+    let pass = document.getElementById("teacherPass").value;
+    if(pass === PASSWORD){
+        document.getElementById("teacherPanel").classList.remove("hidden");
+    }
+}
+
+function toggleTheme(){
+    document.body.classList.toggle("dark");
+}
+
+function publishPost(){
+    let title = document.getElementById("postTitle").value;
+    let content = document.getElementById("postContent").value;
+    let cls = document.getElementById("postClass").value;
+    let due = document.getElementById("postDue").value;
+    let progress = document.getElementById("postProgress").value;
+
+    if(!title || !content) return;
+
+    let posts = JSON.parse(localStorage.getItem("posts") || "[]");
+
+    posts.push({
+        id: Date.now(),
+        class: cls,
+        title,
+        content,
+        due,
+        progress,
+        completed:false,
+        time:Date.now()
+    });
+
+    localStorage.setItem("posts", JSON.stringify(posts));
+    loadPosts();
+}
+
+function toggleComplete(id){
+    let posts = JSON.parse(localStorage.getItem("posts") || "[]");
+
+    posts = posts.map(p=>{
+        if(p.id === id && p.progress !== "done"){
+            p.progress = "progress";
+        }
+        return p;
+    });
+
+    localStorage.setItem("posts", JSON.stringify(posts));
+    loadPosts();
+}
+
+function openClass(cls){
+    currentClass = cls;
+    document.getElementById("classTitle").innerText = cls;
+    loadPosts();
+}
+
+function searchFilter(posts){
+    let term = document.getElementById("searchInput").value.toLowerCase();
+    if(!term) return posts;
+    return posts.filter(p=>
+        p.title.toLowerCase().includes(term) ||
+        p.content.toLowerCase().includes(term)
+    );
+}
+
+function priorityScore(post){
+    let score = 0;
+    if(post.progress === "progress") score += 50;
+    if(post.progress === "none") score += 20;
+    if(post.due){
+        let days = (new Date(post.due)-Date.now())/(1000*3600*24);
+        if(days < 3) score += 40;
+    }
+    return score;
+}
+
+function sortPosts(posts){
+    let sort = document.getElementById("sortFilter").value;
+
+    if(sort === "priority"){
+        return posts.sort((a,b)=>priorityScore(b)-priorityScore(a));
+    }
+
+    if(sort === "new") return posts.sort((a,b)=>b.time-a.time);
+    if(sort === "old") return posts.sort((a,b)=>a.time-b.time);
+
+    if(sort === "due"){
+        return posts.sort((a,b)=> new Date(a.due||"9999-01-01")-new Date(b.due||"9999-01-01"));
+    }
+
+    return posts;
+}
+
+function renderAnalytics(posts){
+    let ctx = document.getElementById("analytics").getContext("2d");
+
+    let counts = {none:0, progress:0, done:0};
+    posts.forEach(p=>counts[p.progress]++);
+
+    if(window.analyticsChart) window.analyticsChart.destroy();
+
+    window.analyticsChart = new Chart(ctx,{type:'doughnut',data:{
+        labels:['Not Started','In Progress','Completed'],
+        datasets:[{data:[counts.none,counts.progress,counts.done]}]
+    }});
+}
+
+function loadPosts(){
+    let postsDiv = document.getElementById("posts");
+    postsDiv.innerHTML="";
+
+    let posts = JSON.parse(localStorage.getItem("posts")||"[]");
+
+    posts = posts.filter(p=>p.class===currentClass);
+    posts = searchFilter(posts);
+    posts = sortPosts(posts);
+
+    renderAnalytics(posts);
+
+    posts.forEach(p=>{
+        let div=document.createElement("div");
+        div.className="post";
+
+        let bg="white";
+        if(p.progress==="done") bg="#e3f7e9";
+        else if(p.progress==="progress") bg="#fff6cc";
+
+        div.style.background=bg;
+
+        div.innerHTML=`
+        <h3>${p.title}</h3>
+        <p>${p.content}</p>
+        ${p.due?`<p>Due: ${p.due}</p>`:""}
+        <p class="progress-tag">${p.progress}</p>
+        <button class="complete-btn" onclick="toggleComplete(${p.id})">
+        Mark Progress
+        </button>
+        `;
+
+        postsDiv.appendChild(div);
+    });
+}
+
+openClass("Math");
+</script>
+
+</body>
+</html>
